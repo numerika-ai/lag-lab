@@ -1,0 +1,38 @@
+{
+ "binance": {
+  "count": 553,
+  "overlap": 0
+ },
+ "gateio": {
+  "count": 642,
+  "overlap": 510
+ },
+ "bybit": {
+  "count": 552,
+  "overlap": 476
+ },
+ "mexc": {
+  "count": 746,
+  "overlap": 511
+ },
+ "bitget": {
+  "count": 534,
+  "overlap": 476
+ },
+ "htx": {
+  "count": 206,
+  "overlap": 188
+ },
+ "phemex": {
+  "count": 507,
+  "overlap": 476
+ },
+ "upbit": {
+  "count": 242,
+  "overlap": 193
+ },
+ "bithumb": {
+  "count": 451,
+  "overlap": 318
+ }
+}

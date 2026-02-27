@@ -1,0 +1,47 @@
+{
+  "safe": {
+    "label": "SAFE: $500/trade (10x eff.), SL 3%, TP 4%",
+    "median": 1865.7150000000001,
+    "mean": 1867.619736,
+    "p5": 1693.66,
+    "p95": 2054.61,
+    "profit_prob": 100.0,
+    "bust_rate": 0.0
+  },
+  "moderate": {
+    "label": "MODERATE: $2,500/trade (50x \u00d7 50%), SL 2.5%, TP 4%",
+    "median": 4854.5599999999995,
+    "mean": 4863.81993,
+    "p5": 4061.2,
+    "p95": 5692.73,
+    "profit_prob": 100.0,
+    "bust_rate": 0.0
+  },
+  "aggressive": {
+    "label": "AGGRESSIVE: $5,000/trade (50x \u00d7 100%), SL 2%, TP 4%",
+    "median": 8707.27,
+    "mean": 8715.922444,
+    "p5": 7105.39,
+    "p95": 10402.4,
+    "profit_prob": 100.0,
+    "bust_rate": 0.0
+  },
+  "yolo": {
+    "label": "YOLO: $25,000/trade (50x \u00d7 $500 margin), SL 1.5%, TP 5%",
+    "median": 35444.775,
+    "mean": 35012.367988,
+    "p5": 26893.28,
+    "p95": 43994.86,
+    "profit_prob": 97.78,
+    "bust_rate": 0.0
+  },
+  "max_degen": {
+    "label": "MAX DEGEN: $50,000/trade (full 50x), SL 1%, TP 5%",
+    "median": 52963.4,
+    "mean": 37084.65443,
+    "p5": 380.13,
+    "p95": 74685.49,
+    "profit_prob": 59.34,
+    "bust_rate": 0.0
+  }
+}
