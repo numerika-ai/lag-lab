@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lag Lab — Cross-Venue Price Lag Research</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #16213e;
+            --accent-cyan: #00ffff;
+            --accent-green: #00ff88;
+            --accent-red: #ff4757;
+            --accent-orange: #ff9500;
+            --accent-purple: #a855f7;
+            --accent-yellow: #facc15;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b3b8;
+            --text-muted: #6c757d;
+            --border-color: #2d3748;
+            --glow-cyan: 0 0 20px rgba(0,255,255,0.3);
+            --glow-green: 0 0 20px rgba(0,255,136,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Consolas', 'Monaco', 'Cascadia Code', 'Fira Code', monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ─── NAVIGATION ─── */
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(10,10,15,0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 20px;
+        }
+        .nav-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 10px 0;
+        }
+        .nav-inner::-webkit-scrollbar { display: none; }
+        .nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.75em;
+            padding: 6px 12px;
+            border-radius: 4px;
+            white-space: nowrap;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .nav a:hover {
+            color: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+            background: rgba(0,255,255,0.05);
+        }
+        .nav-brand {
+            color: var(--accent-cyan) !important;
+            font-weight: bold;
+            font-size: 0.85em !important;
+            text-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        /* ─── CONTAINER ─── */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* ─── HERO ─── */
+        .hero {
+            text-align: center;
+            padding: 60px 20px;
+            margin-bottom: 40px;
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 50%, var(--bg-secondary) 100%);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at center, rgba(0,255,255,0.03) 0%, transparent 70%);
+            animation: heroGlow 8s ease-in-out infinite;
+        }
+        @keyframes heroGlow {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(5%, 5%); }
+        }
+        .hero-content { position: relative; z-index: 1; }
+        .hero h1 {
+            font-size: clamp(2em, 5vw, 3.5em);
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            animation: glitch 4s infinite;
+        }
+        .hero h1 .cyan { color: var(--accent-cyan); }
+        .hero h1 .green { color: var(--accent-green); }
+        .hero .subtitle {
+            font-size: clamp(0.9em, 2vw, 1.2em);
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        .hero-stat {
+            text-align: center;
+            min-width: 120px;
+        }
+        .hero-stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--accent-green);
+            text-shadow: var(--glow-green);
+            line-height: 1;
+        }
+        .hero-stat-label {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        @keyframes glitch {
+            0%, 90%, 100% { text-shadow: 0 0 20px rgba(0,255,255,0.5); }
+            92% { text-shadow: -2px 0 var(--accent-red), 2px 0 var(--accent-green); }
+            94% { text-shadow: 0 0 20px rgba(0,255,255,0.5); }
+            96% { text-shadow: 2px 0 var(--accent-red), -2px 0 var(--accent-green); }
+        }
+
+        /* ─── SECTIONS ─── */
+        .section {
+            margin-bottom: 40px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 30px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .section h2 {
+            color: var(--accent-cyan);
+            font-size: 1.5em;
+            font-weight: 400;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section h2 .icon {
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+        .section-label {
+            font-size: 0.55em;
+            background: rgba(0,255,255,0.1);
+            color: var(--accent-cyan);
+            padding: 2px 8px;
+            border-radius: 3px;
+            vertical-align: middle;
+            font-weight: normal;
+        }
+
+        /* ─── ACTION PLAN / PHASES ─── */
+        .phases-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .phase-card {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        .phase-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        .phase-card.active { border-left-color: var(--accent-green); }
+        .phase-card.progress { border-left-color: var(--accent-cyan); }
+        .phase-card.planned { border-left-color: var(--text-muted); }
+        .phase-card.continuous { border-left-color: var(--accent-purple); }
+        .phase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .phase-title {
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        .phase-badge {
+            font-size: 0.65em;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .badge-active { background: rgba(0,255,136,0.2); color: var(--accent-green); }
+        .badge-progress { background: rgba(0,255,255,0.2); color: var(--accent-cyan); }
+        .badge-planned { background: rgba(108,117,125,0.2); color: var(--text-muted); }
+        .badge-continuous { background: rgba(168,85,247,0.2); color: var(--accent-purple); }
+        .phase-desc {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        .progress-bar {
+            height: 4px;
+            background: var(--bg-primary);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 1.5s ease-out;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-green));
+        }
+        .progress-fill.planned-fill {
+            background: var(--text-muted);
+        }
+        .progress-fill.continuous-fill {
+            background: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan));
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        /* ─── SIGNAL CHAIN ─── */
+        .chain-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0;
+            padding: 30px 10px;
+        }
+        .chain-node {
+            background: var(--bg-primary);
+            border: 2px solid var(--accent-cyan);
+            border-radius: 8px;
+            padding: 14px 18px;
+            text-align: center;
+            min-width: 140px;
+            position: relative;
+            transition: all 0.3s;
+        }
+        .chain-node:hover {
+            box-shadow: var(--glow-cyan);
+            transform: scale(1.05);
+        }
+        .chain-node.master {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 15px rgba(0,255,136,0.3);
+        }
+        .chain-node.master .chain-label { color: var(--accent-green); }
+        .chain-node.hot {
+            border-color: var(--accent-red);
+            animation: pulseRed 2s infinite;
+        }
+        @keyframes pulseRed {
+            0%, 100% { box-shadow: 0 0 10px rgba(255,71,87,0.3); }
+            50% { box-shadow: 0 0 25px rgba(255,71,87,0.6); }
+        }
+        .chain-node.korean {
+            border-color: var(--accent-orange);
+            animation: pulseOrange 2.5s infinite;
+        }
+        @keyframes pulseOrange {
+            0%, 100% { box-shadow: 0 0 10px rgba(255,149,0,0.3); }
+            50% { box-shadow: 0 0 25px rgba(255,149,0,0.6); }
+        }
+        .chain-label {
+            font-size: 0.75em;
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+        .chain-lag {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .chain-arrow {
+            color: var(--accent-cyan);
+            font-size: 1.4em;
+            padding: 0 6px;
+            opacity: 0.6;
+            animation: arrowPulse 1.5s infinite;
+        }
+        @keyframes arrowPulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        /* ─── CHARTS ─── */
+        .chart-container {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+        .chart-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* ─── TABLES ─── */
+        .table-wrap { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 0.85em;
+        }
+        table th {
+            background: var(--bg-primary);
+            color: var(--accent-cyan);
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 2px solid rgba(0,255,255,0.3);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        table tr:hover { background: rgba(0,255,255,0.03); }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .badge-confirmed { background: rgba(0,255,136,0.15); color: var(--accent-green); border: 1px solid rgba(0,255,136,0.3); }
+        .badge-korean { background: rgba(255,149,0,0.15); color: var(--accent-orange); border: 1px solid rgba(255,149,0,0.3); }
+        .badge-candidate { background: rgba(0,255,255,0.15); color: var(--accent-cyan); border: 1px solid rgba(0,255,255,0.3); }
+        .lag-val { font-weight: bold; font-size: 1.1em; }
+        .lag-high { color: var(--accent-red); }
+        .lag-med { color: var(--accent-orange); }
+        .lag-low { color: var(--accent-green); }
+        .corr-high { color: var(--accent-green); font-weight: bold; }
+        .corr-med { color: var(--accent-orange); }
+        .corr-low { color: var(--accent-red); }
+
+        /* ─── MONTE CARLO CARDS ─── */
+        .mc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .mc-card {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .mc-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+        .mc-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+        .mc-card.safe::before { background: var(--accent-green); }
+        .mc-card.moderate::before { background: var(--accent-cyan); }
+        .mc-card.aggressive::before { background: var(--accent-orange); }
+        .mc-card.yolo::before { background: var(--accent-red); }
+        .mc-card.max-degen::before { background: linear-gradient(90deg, var(--accent-red), var(--accent-purple)); }
+        .mc-scenario {
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .mc-median {
+            font-size: 1.8em;
+            font-weight: bold;
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+        .mc-range {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .mc-prob {
+            font-size: 0.8em;
+        }
+        .mc-prob-bar {
+            height: 3px;
+            background: var(--bg-primary);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .mc-prob-fill {
+            height: 100%;
+            border-radius: 2px;
+            background: var(--accent-green);
+        }
+
+        /* ─── SCANNER STATUS ─── */
+        .scanner-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+        }
+        .scanner-card {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+        }
+        .scanner-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .status-dot.running {
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+            animation: blink 2s infinite;
+        }
+        .status-dot.ready {
+            background: var(--accent-cyan);
+            box-shadow: 0 0 8px var(--accent-cyan);
+        }
+        .status-dot.testing {
+            background: var(--accent-orange);
+            box-shadow: 0 0 8px var(--accent-orange);
+            animation: blink 1.5s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .scanner-name {
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .scanner-detail {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        .scanner-exchanges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 8px;
+        }
+        .exchange-chip {
+            font-size: 0.65em;
+            padding: 2px 6px;
+            background: rgba(0,255,255,0.1);
+            border: 1px solid rgba(0,255,255,0.2);
+            border-radius: 3px;
+            color: var(--accent-cyan);
+        }
+        .exchange-chip.korean {
+            background: rgba(255,149,0,0.1);
+            border-color: rgba(255,149,0,0.2);
+            color: var(--accent-orange);
+        }
+
+        /* ─── INSIGHT CARDS ─── */
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .insight-card {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--accent-cyan);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .insight-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--glow-cyan);
+        }
+        .insight-card .insight-icon {
+            font-size: 1.4em;
+            margin-bottom: 8px;
+        }
+        .insight-card .insight-text {
+            font-size: 0.9em;
+            color: var(--text-primary);
+            font-style: italic;
+        }
+        .insight-card .insight-detail {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        /* ─── METHODOLOGY ─── */
+        .method-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .method-item {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .method-item:hover { transform: translateY(-2px); }
+        .method-item h4 {
+            color: var(--accent-cyan);
+            font-size: 0.85em;
+            margin-bottom: 6px;
+        }
+        .method-item p {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+        }
+
+        /* ─── TIMELINE ─── */
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border-color);
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+            padding-bottom: 4px;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 6px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            border: 2px solid var(--bg-secondary);
+        }
+        .timeline-item.highlight::before {
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+        .timeline-time {
+            font-size: 0.7em;
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+        .timeline-title {
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 2px 0;
+        }
+        .timeline-desc {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+        }
+
+        /* ─── FOOTER ─── */
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            margin-top: 40px;
+            border-top: 1px solid var(--border-color);
+        }
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .footer-links a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            font-size: 0.85em;
+            padding: 8px 16px;
+            border: 1px solid rgba(0,255,255,0.3);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .footer-links a:hover {
+            background: rgba(0,255,255,0.1);
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+        }
+        .footer-copy {
+            font-size: 0.75em;
+            color: var(--text-muted);
+        }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 768px) {
+            .container { padding: 12px; }
+            .hero { padding: 30px 16px; }
+            .hero h1 { letter-spacing: 0; }
+            .section { padding: 20px 16px; }
+            .chart-row { grid-template-columns: 1fr; }
+            .chain-container { flex-direction: column; align-items: stretch; }
+            .chain-arrow { transform: rotate(90deg); text-align: center; padding: 4px 0; }
+            .chain-node { min-width: unset; }
+            .mc-grid { grid-template-columns: 1fr 1fr; }
+            .phases-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .mc-grid { grid-template-columns: 1fr; }
+            .hero-stats { gap: 16px; }
+            .hero-stat-value { font-size: 1.8em; }
+        }
+
+        /* ─── ANIMATED COUNTERS ─── */
+        .counter { display: inline-block; }
+
+        /* ─── SCROLLBAR ─── */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-cyan); }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════ NAVIGATION ═══════════════════ -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="#top" class="nav-brand">LAG LAB</a>
+        <a href="#plan">Plan</a>
+        <a href="#chain">Signal Chain</a>
+        <a href="#exchanges">Exchanges</a>
+        <a href="#signals">Signals</a>
+        <a href="#montecarlo">Monte Carlo</a>
+        <a href="#scanner">Scanner</a>
+        <a href="#insights">Insights</a>
+        <a href="#methodology">Methodology</a>
+        <a href="#log">Activity</a>
+    </div>
+</nav>
+
+<div class="container" id="top">
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<header class="hero">
+    <div class="hero-content">
+        <h1><span class="cyan">Lag Lab</span></h1>
+        <div class="subtitle">Cross-Venue Price Lag Research</div>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-value"><span class="counter" data-target="9">0</span></div>
+                <div class="hero-stat-label">Exchanges</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value"><span class="counter" data-target="1046">0</span></div>
+                <div class="hero-stat-label">Tests Run</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value"><span class="counter" data-target="28">0</span><span style="font-size:0.5em">s</span></div>
+                <div class="hero-stat-label">Champion Lag</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value" style="color:var(--accent-cyan)">0.88</div>
+                <div class="hero-stat-label">Peak Correlation</div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ═══════════════════ ACTION PLAN STATUS ═══════════════════ -->
+<section class="section" id="plan">
+    <h2><span class="icon">//</span> Action Plan Status <span class="section-label">6 PHASES</span></h2>
+    <div class="phases-grid">
+        <div class="phase-card active">
+            <div class="phase-header">
+                <div class="phase-title">Phase 1: Fix &amp; Validate</div>
+                <span class="phase-badge badge-active">IN PROGRESS</span>
+            </div>
+            <div class="phase-desc">Scanner v3 ready (300s window, multi-timeframe). Validator running 20 pairs. Binance WS stability fix.</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:65%"></div></div>
+        </div>
+        <div class="phase-card progress">
+            <div class="phase-header">
+                <div class="phase-title">Phase 2: Exchange Expansion</div>
+                <span class="phase-badge badge-progress">IN PROGRESS</span>
+            </div>
+            <div class="phase-desc">Adding Phemex (508 pairs), Bitget (536), HTX (206). Korean deep dive on Upbit + Bithumb.</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:25%"></div></div>
+        </div>
+        <div class="phase-card planned">
+            <div class="phase-header">
+                <div class="phase-title">Phase 5: Paper Trading Bot</div>
+                <span class="phase-badge badge-planned">PLANNED</span>
+            </div>
+            <div class="phase-desc">Automated signal detection on BTC moves >0.3%. Simulated execution on Gate.io WIF. PNL tracking.</div>
+            <div class="progress-bar"><div class="progress-fill planned-fill" style="width:0%"></div></div>
+        </div>
+        <div class="phase-card planned">
+            <div class="phase-header">
+                <div class="phase-title">Phase 3: DEX Integration</div>
+                <span class="phase-badge badge-planned">PLANNED</span>
+            </div>
+            <div class="phase-desc">Hyperliquid, dYdX v4, GMX V2, Vertex, Drift. Blockchain latency vs CEX lag patterns.</div>
+            <div class="progress-bar"><div class="progress-fill planned-fill" style="width:0%"></div></div>
+        </div>
+        <div class="phase-card planned">
+            <div class="phase-header">
+                <div class="phase-title">Phase 4: Alternative Signals</div>
+                <span class="phase-badge badge-planned">PLANNED</span>
+            </div>
+            <div class="phase-desc">Funding rate divergence, basis trading, open interest anomalies, liquidation cascade detection.</div>
+            <div class="progress-bar"><div class="progress-fill planned-fill" style="width:0%"></div></div>
+        </div>
+        <div class="phase-card continuous">
+            <div class="phase-header">
+                <div class="phase-title">Phase 6: GH Pages Updates</div>
+                <span class="phase-badge badge-continuous">CONTINUOUS</span>
+            </div>
+            <div class="phase-desc">Publish validation results, exchange universe map, paper trading dashboard after each phase.</div>
+            <div class="progress-bar"><div class="progress-fill continuous-fill" style="width:40%"></div></div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ SIGNAL PROPAGATION CHAIN ═══════════════════ -->
+<section class="section" id="chain">
+    <h2><span class="icon">//</span> Signal Propagation Chain</h2>
+    <div class="chain-container">
+        <div class="chain-node master">
+            <div class="chain-label">BINANCE FUTURES BTC</div>
+            <div class="chain-lag" style="color:var(--accent-green)">t = 0</div>
+        </div>
+        <div class="chain-arrow">&#x25B6;</div>
+        <div class="chain-node">
+            <div class="chain-label">BINANCE SPOT</div>
+            <div class="chain-lag">+1s</div>
+        </div>
+        <div class="chain-arrow">&#x25B6;</div>
+        <div class="chain-node">
+            <div class="chain-label">GATE.IO BTC</div>
+            <div class="chain-lag" style="color:var(--accent-green)">+0s</div>
+        </div>
+        <div class="chain-arrow">&#x25B6;</div>
+        <div class="chain-node hot">
+            <div class="chain-label">ALTS (WIF/BONK/ADA)</div>
+            <div class="chain-lag lag-high">+6-33s</div>
+        </div>
+        <div class="chain-arrow">&#x25B6;</div>
+        <div class="chain-node korean">
+            <div class="chain-label">KOREAN (UPBIT/BITHUMB)</div>
+            <div class="chain-lag" style="color:var(--accent-orange)">+13-108s</div>
+        </div>
+    </div>
+    <div style="text-align:center; font-size:0.75em; color:var(--text-muted); margin-top:10px;">
+        Binance Futures BTC is the price leader. All other venues react with measurable delay.<br>
+        Less market makers &times; less popular coin = more lag.
+    </div>
+</section>
+
+<!-- ═══════════════════ EXCHANGE UNIVERSE ═══════════════════ -->
+<section class="section" id="exchanges">
+    <h2><span class="icon">//</span> Exchange Universe <span class="section-label">9 EXCHANGES</span></h2>
+    <div class="chart-row">
+        <div class="chart-container">
+            <canvas id="exchangePairsChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="exchangeOverlapChart"></canvas>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ TOP VERIFIED SIGNALS ═══════════════════ -->
+<section class="section" id="signals">
+    <h2><span class="icon">//</span> Top Verified Signals</h2>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Pair</th>
+                    <th>Exchange</th>
+                    <th>Lag</th>
+                    <th>Correlation</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td><strong>WIF/USDT</strong></td>
+                    <td>Gate.io</td>
+                    <td><span class="lag-val lag-high">28s</span></td>
+                    <td><span class="corr-high">0.88</span></td>
+                    <td><span class="badge badge-confirmed">CONFIRMED</span></td>
+                    <td>Champion — pure exchange lag, low MM activity</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>BONK/USDT</strong></td>
+                    <td>Gate.io</td>
+                    <td><span class="lag-val lag-high">33s</span></td>
+                    <td><span class="corr-high">0.82</span></td>
+                    <td><span class="badge badge-confirmed">CONFIRMED</span></td>
+                    <td>Exchange + asset lag combined</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>ADA/USDT</strong></td>
+                    <td>Gate.io</td>
+                    <td><span class="lag-val lag-med">6s</span></td>
+                    <td><span class="corr-med">0.71</span></td>
+                    <td><span class="badge badge-confirmed">CONFIRMED</span></td>
+                    <td>Shorter lag, moderate correlation</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>FLOW/USDT</strong></td>
+                    <td>Upbit <span style="font-size:1.1em">&#x1F1F0;&#x1F1F7;</span></td>
+                    <td><span class="lag-val lag-med">13s</span></td>
+                    <td><span class="corr-med">0.74</span></td>
+                    <td><span class="badge badge-korean">KOREAN</span></td>
+                    <td>Korean exchange, isolated market</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td><strong>DOGE/USDT</strong></td>
+                    <td>Upbit <span style="font-size:1.1em">&#x1F1F0;&#x1F1F7;</span></td>
+                    <td><span class="lag-val lag-high">28s</span></td>
+                    <td><span class="corr-med">0.73</span></td>
+                    <td><span class="badge badge-korean">KOREAN</span></td>
+                    <td>Same lag as WIF but on Upbit</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td><strong>MOODENG/USDT</strong></td>
+                    <td>Upbit <span style="font-size:1.1em">&#x1F1F0;&#x1F1F7;</span></td>
+                    <td><span class="lag-val lag-high">108s</span></td>
+                    <td><span class="corr-med">0.74</span></td>
+                    <td><span class="badge badge-korean">KOREAN</span></td>
+                    <td>Extreme lag — 108 seconds behind Binance</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ═══════════════════ MONTE CARLO SIMULATION ═══════════════════ -->
+<section class="section" id="montecarlo">
+    <h2><span class="icon">//</span> Monte Carlo Simulation <span class="section-label">5,000 SIMS &times; 5 SCENARIOS</span></h2>
+    <p style="font-size:0.8em; color:var(--text-muted); margin-bottom:20px;">Starting capital: $10,000 | 30-day simulation | Based on WIF/Gate.io 28s lag signal</p>
+    <div class="mc-grid">
+        <div class="mc-card safe">
+            <div class="mc-scenario" style="color:var(--accent-green)">Safe</div>
+            <div class="mc-median" style="color:var(--accent-green)">$18,657</div>
+            <div class="mc-range">P5 $16,937 &mdash; P95 $20,546</div>
+            <div class="mc-prob">Profit probability: <strong style="color:var(--accent-green)">100%</strong></div>
+            <div class="mc-prob-bar"><div class="mc-prob-fill" style="width:100%"></div></div>
+        </div>
+        <div class="mc-card moderate">
+            <div class="mc-scenario" style="color:var(--accent-cyan)">Moderate</div>
+            <div class="mc-median" style="color:var(--accent-cyan)">$48,546</div>
+            <div class="mc-range">P5 $40,612 &mdash; P95 $56,927</div>
+            <div class="mc-prob">Profit probability: <strong style="color:var(--accent-green)">100%</strong></div>
+            <div class="mc-prob-bar"><div class="mc-prob-fill" style="width:100%"></div></div>
+        </div>
+        <div class="mc-card aggressive">
+            <div class="mc-scenario" style="color:var(--accent-orange)">Aggressive</div>
+            <div class="mc-median" style="color:var(--accent-orange)">$87,073</div>
+            <div class="mc-range">P5 $71,054 &mdash; P95 $104,024</div>
+            <div class="mc-prob">Profit probability: <strong style="color:var(--accent-green)">100%</strong></div>
+            <div class="mc-prob-bar"><div class="mc-prob-fill" style="width:100%"></div></div>
+        </div>
+        <div class="mc-card yolo">
+            <div class="mc-scenario" style="color:var(--accent-red)">YOLO</div>
+            <div class="mc-median" style="color:var(--accent-red)">$354,448</div>
+            <div class="mc-range">P5 $268,933 &mdash; P95 $439,949</div>
+            <div class="mc-prob">Profit probability: <strong style="color:var(--accent-orange)">97.8%</strong></div>
+            <div class="mc-prob-bar"><div class="mc-prob-fill" style="width:97.8%;background:var(--accent-orange)"></div></div>
+        </div>
+        <div class="mc-card max-degen">
+            <div class="mc-scenario" style="color:var(--accent-purple)">Max Degen</div>
+            <div class="mc-median" style="color:var(--accent-purple)">$529,634</div>
+            <div class="mc-range">P5 $3,801 &mdash; P95 $746,855</div>
+            <div class="mc-prob">Profit probability: <strong style="color:var(--accent-red)">59.3%</strong></div>
+            <div class="mc-prob-bar"><div class="mc-prob-fill" style="width:59.3%;background:var(--accent-red)"></div></div>
+        </div>
+    </div>
+    <div class="chart-container">
+        <canvas id="monteCarloChart"></canvas>
+    </div>
+</section>
+
+<!-- ═══════════════════ SCANNER STATUS ═══════════════════ -->
+<section class="section" id="scanner">
+    <h2><span class="icon">//</span> Scanner Status</h2>
+    <div class="scanner-grid">
+        <div class="scanner-card">
+            <div class="scanner-header">
+                <div class="status-dot running"></div>
+                <div class="scanner-name">Scanner v2</div>
+            </div>
+            <div class="scanner-detail">Running &mdash; 10 scans completed</div>
+            <div class="scanner-detail">6 exchanges connected, runs until 18:00 UTC</div>
+            <div class="scanner-exchanges">
+                <span class="exchange-chip">Binance</span>
+                <span class="exchange-chip">Gate.io</span>
+                <span class="exchange-chip">Bybit</span>
+                <span class="exchange-chip">MEXC</span>
+                <span class="exchange-chip korean">Upbit</span>
+                <span class="exchange-chip korean">Bithumb</span>
+            </div>
+        </div>
+        <div class="scanner-card">
+            <div class="scanner-header">
+                <div class="status-dot ready"></div>
+                <div class="scanner-name">Scanner v3</div>
+            </div>
+            <div class="scanner-detail">Ready &mdash; 975 lines, 9 exchanges</div>
+            <div class="scanner-detail">300s window, multi-timeframe (30/60/120/300s)</div>
+            <div class="scanner-exchanges">
+                <span class="exchange-chip">Binance</span>
+                <span class="exchange-chip">Gate.io</span>
+                <span class="exchange-chip">Bybit</span>
+                <span class="exchange-chip">MEXC</span>
+                <span class="exchange-chip">Bitget</span>
+                <span class="exchange-chip">Phemex</span>
+                <span class="exchange-chip">HTX</span>
+                <span class="exchange-chip korean">Upbit</span>
+                <span class="exchange-chip korean">Bithumb</span>
+            </div>
+        </div>
+        <div class="scanner-card">
+            <div class="scanner-header">
+                <div class="status-dot testing"></div>
+                <div class="scanner-name">Lag Validator</div>
+            </div>
+            <div class="scanner-detail">Testing &mdash; 20 candidate pairs</div>
+            <div class="scanner-detail">180s per pair, forward-fill to 1s series</div>
+            <div class="scanner-exchanges">
+                <span class="exchange-chip">WIF</span>
+                <span class="exchange-chip">BONK</span>
+                <span class="exchange-chip">ESP</span>
+                <span class="exchange-chip">SKY</span>
+                <span class="exchange-chip">ADA</span>
+                <span class="exchange-chip">FLOW</span>
+                <span class="exchange-chip">DOGE</span>
+                <span class="exchange-chip">MOODENG</span>
+            </div>
+        </div>
+        <div class="scanner-card">
+            <div class="scanner-header">
+                <div class="status-dot running"></div>
+                <div class="scanner-name">Cron: Research Thinking</div>
+            </div>
+            <div class="scanner-detail">Every 15 min &mdash; creative thinking cycle</div>
+            <div class="scanner-detail">New exchanges, strategies, ideas</div>
+            <div class="scanner-exchanges">
+                <span class="exchange-chip">lag-research-think</span>
+                <span class="exchange-chip">collector-health</span>
+                <span class="exchange-chip">training-monitor</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ RESEARCH INSIGHTS ═══════════════════ -->
+<section class="section" id="insights">
+    <h2><span class="icon">//</span> Research Insights</h2>
+    <div class="insights-grid">
+        <div class="insight-card" style="border-left-color:var(--accent-green)">
+            <div class="insight-icon">&#x1F9EA;</div>
+            <div class="insight-text">"Less market makers &times; less popular coin = more lag"</div>
+            <div class="insight-detail">WIF and BONK have thin orderbooks on Gate.io with few active MMs. DOGE is synced because it has active arbitrage bots.</div>
+        </div>
+        <div class="insight-card" style="border-left-color:var(--accent-orange)">
+            <div class="insight-icon">&#x26A0;</div>
+            <div class="insight-text">"120s correlation window = boundary artifacts"</div>
+            <div class="insight-detail">Scanner v2 found ALL 961 results at &plusmn;120s — the window edge. Fixed in v3 with 300s window and boundary filter.</div>
+        </div>
+        <div class="insight-card" style="border-left-color:var(--accent-red)">
+            <div class="insight-icon">&#x1F1F0;&#x1F1F7;</div>
+            <div class="insight-text">"Korean exchanges show 13-108s extreme lag"</div>
+            <div class="insight-detail">Upbit and Bithumb are isolated from global markets. MOODENG on Upbit lags 108 seconds behind Binance. Kimchi premium adds complexity.</div>
+        </div>
+        <div class="insight-card" style="border-left-color:var(--accent-purple)">
+            <div class="insight-icon">&#x1F4CA;</div>
+            <div class="insight-text">"aggTrades insufficient for low-cap pairs"</div>
+            <div class="insight-detail">Shitcoins on Gate.io trade too infrequently for aggTrades analysis. Only live bookTicker (best bid/ask) provides continuous data.</div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ METHODOLOGY ═══════════════════ -->
+<section class="section" id="methodology">
+    <h2><span class="icon">//</span> Methodology</h2>
+    <div class="method-grid">
+        <div class="method-item">
+            <h4>Spearman Rank</h4>
+            <p>Cross-correlation using Spearman rank — robust to outliers, measures monotonic relationships</p>
+        </div>
+        <div class="method-item">
+            <h4>Multi-Timeframe</h4>
+            <p>Sub-windows: 30s, 60s, 120s, 300s. Boundary artifact filter at 0.9&times; window size</p>
+        </div>
+        <div class="method-item">
+            <h4>Forward-Fill</h4>
+            <p>Sparse tick data forward-filled to continuous 1s series for consistent correlation measurement</p>
+        </div>
+        <div class="method-item">
+            <h4>WebSocket bookTicker</h4>
+            <p>Best bid/ask real-time feed. Highest frequency updates. Mid-price to 1s returns.</p>
+        </div>
+        <div class="method-item">
+            <h4>Infrastructure</h4>
+            <p>Tank: AMD Ryzen 9 7900X, RTX 3090. Spark: NVIDIA GB10 Blackwell, 128GB unified.</p>
+        </div>
+        <div class="method-item">
+            <h4>Data Pipeline</h4>
+            <p>27 Spark systemd collectors + 26 Tank Docker containers. DuckDB master: 11M+ rows.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ ACTIVITY LOG ═══════════════════ -->
+<section class="section" id="log">
+    <h2><span class="icon">//</span> Activity Log</h2>
+    <div class="timeline">
+        <div class="timeline-item highlight">
+            <div class="timeline-time">2026-02-27 07:48 UTC</div>
+            <div class="timeline-title">Phase 1 Started — Fix &amp; Validate</div>
+            <div class="timeline-desc">Scanner v3 created (975 lines). Lag validator launched for 20 candidates. Forward-fill fix for sparse ticks.</div>
+        </div>
+        <div class="timeline-item highlight">
+            <div class="timeline-time">2026-02-27 07:50 UTC</div>
+            <div class="timeline-title">Master Database Created</div>
+            <div class="timeline-desc">lag_registry.db — 1,046 lag tests, 9 exchanges, 5 simulations imported. Single source of truth.</div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-time">2026-02-27 07:40 UTC</div>
+            <div class="timeline-title">Action Plan Created &amp; Approved</div>
+            <div class="timeline-desc">6-phase plan approved. $10K capital, auto risk management, max leverage. Priority: 1&#x2192;2&#x2192;5&#x2192;3&#x2192;4.</div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-time">2026-02-27 07:35 UTC</div>
+            <div class="timeline-title">Overnight Discovery Report Published</div>
+            <div class="timeline-desc">35KB dark Bloomberg report on GitHub Pages. Exchange universe, signal chain, top lags, Monte Carlo.</div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-time">2026-02-27 06:54 UTC</div>
+            <div class="timeline-title">Scanner v2 Restarted</div>
+            <div class="timeline-desc">6 exchanges, 10 scans completed. Finding: ALL results at &plusmn;120s boundary = window artifacts.</div>
+        </div>
+        <div class="timeline-item highlight">
+            <div class="timeline-time">2026-02-26 23:30 UTC</div>
+            <div class="timeline-title">Live WebSocket Tests — Champion Found</div>
+            <div class="timeline-desc">WIF/Gate.io: 28s lag, 0.88 corr. BONK: 33s, 0.82 corr. ADA: 6s, 0.71 corr. BTC synced at 0s.</div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-time">2026-02-26 22:00 UTC</div>
+            <div class="timeline-title">Full Research Session</div>
+            <div class="timeline-desc">Exchange discovery (9 exchanges), signal chain mapped, Monte Carlo (5000 sims), Gate.io API analysis.</div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<footer class="footer">
+    <div class="footer-links">
+        <a href="https://github.com/numerika-ai/lag-lab" target="_blank">GitHub Repository</a>
+        <a href="https://numerika-ai.github.io/crypto-data-coverage/overnight-discovery-report.html" target="_blank">Overnight Discovery Report</a>
+        <a href="https://numerika-ai.github.io/crypto-data-coverage/cross-venue-lag-report.html" target="_blank">Cross-Venue Lag Report</a>
+    </div>
+    <div class="footer-copy">
+        Lag Lab &mdash; Cross-Venue Price Lag Research &bull; Numerika AI &bull; 2026<br>
+        Data: Binance, Gate.io, Bybit, MEXC, Bitget, Phemex, HTX, Upbit, Bithumb
+    </div>
+</footer>
+
+</div><!-- /container -->
+
+<!-- ═══════════════════ SCRIPTS ═══════════════════ -->
+<script>
+// ─── Animated Counters ───
+function animateCounters() {
+    document.querySelectorAll('.counter').forEach(el => {
+        const target = +el.dataset.target;
+        const duration = 1500;
+        const start = performance.now();
+        function update(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(target * eased).toLocaleString();
+            if (progress < 1) requestAnimationFrame(update);
+        }
+        requestAnimationFrame(update);
+    });
+}
+
+// ─── Exchange Pairs Chart ───
+function createExchangePairsChart() {
+    const ctx = document.getElementById('exchangePairsChart').getContext('2d');
+    const exchanges = ['MEXC','Gate.io','Binance','Bybit','Bitget','Phemex','Bithumb','Upbit','HTX'];
+    const counts = [746, 642, 553, 552, 534, 507, 451, 242, 206];
+    const colors = exchanges.map(e => {
+        if (e === 'Upbit' || e === 'Bithumb') return 'rgba(255,149,0,0.7)';
+        if (e === 'Binance') return 'rgba(0,255,136,0.7)';
+        return 'rgba(0,255,255,0.5)';
+    });
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: exchanges,
+            datasets: [{
+                label: 'Total Pairs',
+                data: counts,
+                backgroundColor: colors,
+                borderColor: colors.map(c => c.replace('0.7','1').replace('0.5','0.8')),
+                borderWidth: 1,
+                borderRadius: 3
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: 'Total Futures Pairs per Exchange',
+                    color: '#00ffff',
+                    font: { family: 'Consolas, Monaco, monospace', size: 14 }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#b0b3b8', font: { family: 'Consolas, Monaco, monospace' } },
+                    grid: { color: 'rgba(45,55,72,0.5)' }
+                },
+                y: {
+                    ticks: { color: '#ffffff', font: { family: 'Consolas, Monaco, monospace' } },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+// ─── Exchange Overlap Chart ───
+function createExchangeOverlapChart() {
+    const ctx = document.getElementById('exchangeOverlapChart').getContext('2d');
+    const exchanges = ['MEXC','Gate.io','Bybit','Bitget','Phemex','Bithumb','Upbit','HTX'];
+    const overlaps = [511, 510, 476, 476, 476, 318, 193, 188];
+    const colors = exchanges.map(e => {
+        if (e === 'Upbit' || e === 'Bithumb') return 'rgba(255,149,0,0.7)';
+        return 'rgba(0,255,136,0.5)';
+    });
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: exchanges,
+            datasets: [{
+                label: 'Overlap with Binance',
+                data: overlaps,
+                backgroundColor: colors,
+                borderColor: colors.map(c => c.replace('0.7','1').replace('0.5','0.8')),
+                borderWidth: 1,
+                borderRadius: 3
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: 'Pair Overlap with Binance Futures',
+                    color: '#00ff88',
+                    font: { family: 'Consolas, Monaco, monospace', size: 14 }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#b0b3b8', font: { family: 'Consolas, Monaco, monospace' } },
+                    grid: { color: 'rgba(45,55,72,0.5)' }
+                },
+                y: {
+                    ticks: { color: '#ffffff', font: { family: 'Consolas, Monaco, monospace' } },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+// ─── Monte Carlo Chart ───
+function createMonteCarloChart() {
+    const ctx = document.getElementById('monteCarloChart').getContext('2d');
+    const scenarios = ['Safe', 'Moderate', 'Aggressive', 'YOLO', 'Max Degen'];
+    const medians =   [18657, 48546, 87073, 354448, 529634];
+    const p5s =       [16937, 40612, 71054, 268933, 3801];
+    const p95s =      [20546, 56927, 104024, 439949, 746855];
+    const colors =    ['#00ff88','#00ffff','#ff9500','#ff4757','#a855f7'];
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: scenarios,
+            datasets: [
+                {
+                    label: 'P5 (worst case)',
+                    data: p5s,
+                    backgroundColor: colors.map(c => c + '33'),
+                    borderColor: colors,
+                    borderWidth: 1,
+                    borderRadius: 3
+                },
+                {
+                    label: 'Median',
+                    data: medians,
+                    backgroundColor: colors.map(c => c + '88'),
+                    borderColor: colors,
+                    borderWidth: 1,
+                    borderRadius: 3
+                },
+                {
+                    label: 'P95 (best case)',
+                    data: p95s,
+                    backgroundColor: colors.map(c => c + 'cc'),
+                    borderColor: colors,
+                    borderWidth: 2,
+                    borderRadius: 3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    labels: { color: '#b0b3b8', font: { family: 'Consolas, Monaco, monospace' } }
+                },
+                title: {
+                    display: true,
+                    text: '30-Day P&L Distribution by Scenario ($10K start)',
+                    color: '#00ffff',
+                    font: { family: 'Consolas, Monaco, monospace', size: 14 }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#b0b3b8', font: { family: 'Consolas, Monaco, monospace' } },
+                    grid: { color: 'rgba(45,55,72,0.5)' }
+                },
+                y: {
+                    ticks: {
+                        color: '#b0b3b8',
+                        font: { family: 'Consolas, Monaco, monospace' },
+                        callback: v => '$' + (v/1000).toFixed(0) + 'K'
+                    },
+                    grid: { color: 'rgba(45,55,72,0.5)' },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// ─── Initialize ───
+document.addEventListener('DOMContentLoaded', function() {
+    animateCounters();
+    createExchangePairsChart();
+    createExchangeOverlapChart();
+    createMonteCarloChart();
+
+    // Animate progress bars on scroll
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.querySelectorAll('.progress-fill').forEach(bar => {
+                    const width = bar.style.width;
+                    bar.style.width = '0%';
+                    setTimeout(() => { bar.style.width = width; }, 100);
+                });
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.2 });
+    document.querySelectorAll('.phases-grid').forEach(el => observer.observe(el));
+});
+</script>
+
+</body>
+</html>
