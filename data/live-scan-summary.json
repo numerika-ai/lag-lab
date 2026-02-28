@@ -1,0 +1,79 @@
+{
+  "scan_period": "20260228_021901 to 20260228_113024",
+  "snapshots": 108,
+  "total_pair_measurements": 144,
+  "pairs_with_lag": 31,
+  "exploitable_count": 4,
+  "exploitable": [
+    {
+      "coin": "ZK",
+      "exchange": "Gate.io",
+      "lag": 5,
+      "corr": 0.741,
+      "stdev_bps": 5.0,
+      "trades": 435
+    },
+    {
+      "coin": "W",
+      "exchange": "Gate.io",
+      "lag": 4,
+      "corr": 0.953,
+      "stdev_bps": 6.5,
+      "trades": 82
+    },
+    {
+      "coin": "ADA",
+      "exchange": "Hyperliquid",
+      "lag": 4,
+      "corr": 0.561,
+      "stdev_bps": 2.2,
+      "trades": 110
+    },
+    {
+      "coin": "WLFI",
+      "exchange": "Gate.io",
+      "lag": 3,
+      "corr": 0.56,
+      "stdev_bps": 4.8,
+      "trades": 253
+    }
+  ],
+  "top_by_exchange": {
+    "Hyperliquid": [
+      {
+        "coin": "ADA",
+        "exchange": "Hyperliquid",
+        "lag": 4,
+        "corr": 0.561,
+        "stdev_bps": 2.2,
+        "trades": 110
+      }
+    ],
+    "Gate.io": [
+      {
+        "coin": "W",
+        "exchange": "Gate.io",
+        "lag": 4,
+        "corr": 0.953,
+        "stdev_bps": 6.5,
+        "trades": 82
+      },
+      {
+        "coin": "ZK",
+        "exchange": "Gate.io",
+        "lag": 5,
+        "corr": 0.741,
+        "stdev_bps": 5.0,
+        "trades": 435
+      },
+      {
+        "coin": "WLFI",
+        "exchange": "Gate.io",
+        "lag": 3,
+        "corr": 0.56,
+        "stdev_bps": 4.8,
+        "trades": 253
+      }
+    ]
+  }
+}
